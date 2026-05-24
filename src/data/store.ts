@@ -9,7 +9,7 @@ const STORAGE_KEYS = {
   flags:        'fintrack_flags',
 }
 
-function load(key, fallback) {
+function load<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key)
     return raw ? JSON.parse(raw) : fallback
@@ -18,7 +18,7 @@ function load(key, fallback) {
   }
 }
 
-function save(key, value) {
+function save(key: string, value: unknown): void {
   localStorage.setItem(key, JSON.stringify(value))
 }
 
@@ -27,7 +27,7 @@ export function getTransactions() {
   return load(STORAGE_KEYS.transactions, SEED_TRANSACTIONS)
 }
 
-export function saveTransaction(txn) {
+export function saveTransaction(txn: typeof SEED_TRANSACTIONS[number]): void {
   const all = getTransactions()
   const idx = all.findIndex(t => t.id === txn.id)
   if (idx >= 0) all[idx] = txn
@@ -35,7 +35,7 @@ export function saveTransaction(txn) {
   save(STORAGE_KEYS.transactions, all)
 }
 
-export function deleteTransaction(id) {
+export function deleteTransaction(id: string): void {
   const all = getTransactions().filter(t => t.id !== id)
   save(STORAGE_KEYS.transactions, all)
 }
@@ -45,7 +45,7 @@ export function getBudgets() {
   return load(STORAGE_KEYS.budgets, SEED_BUDGETS)
 }
 
-export function saveBudget(budget) {
+export function saveBudget(budget: typeof SEED_BUDGETS[number]): void {
   const all = getBudgets()
   const idx = all.findIndex(b => b.id === budget.id)
   if (idx >= 0) all[idx] = budget
@@ -53,7 +53,7 @@ export function saveBudget(budget) {
   save(STORAGE_KEYS.budgets, all)
 }
 
-export function deleteBudget(id) {
+export function deleteBudget(id: string): void {
   const all = getBudgets().filter(b => b.id !== id)
   save(STORAGE_KEYS.budgets, all)
 }
@@ -63,7 +63,7 @@ export function getSession() {
   return load(STORAGE_KEYS.auth, null)
 }
 
-export function login(email, password) {
+export function login(email: string, password: string) {
   if (email === DEMO_USER.email && password === DEMO_USER.password) {
     save(STORAGE_KEYS.auth, { userId: DEMO_USER.id, loggedInAt: new Date().toISOString() })
     return { success: true }
@@ -71,7 +71,7 @@ export function login(email, password) {
   return { success: false, error: 'Invalid email or password' }
 }
 
-export function logout() {
+export function logout(): void {
   localStorage.removeItem(STORAGE_KEYS.auth)
 }
 
@@ -80,14 +80,14 @@ export function getFlags() {
   return load(STORAGE_KEYS.flags, FEATURE_FLAGS)
 }
 
-export function setFlag(key, value) {
-  const flags = getFlags()
+export function setFlag(key: string, value: boolean): void {
+  const flags = getFlags() as Record<string, boolean>
   flags[key] = value
   save(STORAGE_KEYS.flags, flags)
 }
 
 // --- Test Controls: reset everything to seed state ---
-export function resetToSeedData() {
+export function resetToSeedData(): void {
   save(STORAGE_KEYS.transactions, SEED_TRANSACTIONS)
   save(STORAGE_KEYS.budgets, SEED_BUDGETS)
   save(STORAGE_KEYS.flags, FEATURE_FLAGS)
@@ -98,7 +98,7 @@ export function getAccountBalance() {
   return getTransactions().reduce((sum, t) => sum + t.amount, 0)
 }
 
-export function getMonthlyStats(year, month) {
+export function getMonthlyStats(year: number, month: number) {
   const txns = getTransactions().filter(t => {
     const d = new Date(t.date)
     return d.getFullYear() === year && d.getMonth() + 1 === month
@@ -108,7 +108,7 @@ export function getMonthlyStats(year, month) {
   return { income, expenses, net: income - expenses, transactions: txns }
 }
 
-export function getBudgetSpending(year, month) {
+export function getBudgetSpending(year: number, month: number) {
   const { transactions } = getMonthlyStats(year, month)
   return getBudgets().map(budget => {
     const spent = transactions

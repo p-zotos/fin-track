@@ -3,22 +3,26 @@ import { getTransactions, saveTransaction, deleteTransaction } from '../data/sto
 import { CATEGORIES, SEED_TRANSACTIONS } from '../data/seed.js'
 import { format } from 'date-fns'
 
-const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(Math.abs(n))
-const cat = (id) => CATEGORIES.find(c => c.id === id)
-const uid = () => 'txn-' + Date.now()
+const fmt = (n: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(Math.abs(n))
+const cat = (id: string) => CATEGORIES.find(c => c.id === id)
+const uid = (): string => 'txn-' + Date.now()
 
-const EMPTY_FORM = { description: '', amount: '', date: format(new Date(), 'yyyy-MM-dd'), categoryId: 'cat-2', type: 'expense', note: '' }
+type TransactionForm = { description: string; amount: string | number; date: string; categoryId: string; type: string; note: string }
+type TransactionErrors = { description?: string; amount?: string; date?: string }
+type TransactionModalMode = 'add' | 'edit' | null
+
+const EMPTY_FORM: TransactionForm = { description: '', amount: '', date: format(new Date(), 'yyyy-MM-dd'), categoryId: 'cat-2', type: 'expense', note: '' }
 
 export default function TransactionsPage() {
   const [txns, setTxns]         = useState(getTransactions)
   const [search, setSearch]     = useState('')
   const [filterCat, setFilterCat] = useState('')
   const [filterType, setFilterType] = useState('')
-  const [modal, setModal]       = useState(null) // null | 'add' | 'edit'
-  const [editing, setEditing]   = useState(null)
-  const [form, setForm]         = useState(EMPTY_FORM)
-  const [errors, setErrors]     = useState({})
-  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [modal, setModal]       = useState<TransactionModalMode>(null)
+  const [editing, setEditing]   = useState<ReturnType<typeof getTransactions>[number] | null>(null)
+  const [form, setForm]         = useState<TransactionForm>(EMPTY_FORM)
+  const [errors, setErrors]     = useState<TransactionErrors>({})
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   const refresh = () => setTxns(getTransactions())
 
@@ -34,15 +38,15 @@ export default function TransactionsPage() {
     setEditing(null); setModal('add')
   }
 
-  const openEdit = (txn) => {
+  const openEdit = (txn: ReturnType<typeof getTransactions>[number]) => {
     setForm({ ...txn, amount: Math.abs(txn.amount) })
     setErrors({}); setEditing(txn); setModal('edit')
   }
 
-  const validate = () => {
-    const e = {}
+  const validate = (): TransactionErrors => {
+    const e: TransactionErrors = {}
     if (!form.description.trim()) e.description = 'Description is required'
-    if (!form.amount || isNaN(parseFloat(form.amount)) || parseFloat(form.amount) <= 0)
+    if (!form.amount || isNaN(parseFloat(String(form.amount))) || parseFloat(String(form.amount)) <= 0)
       e.amount = 'Enter a valid positive amount'
     if (!form.date) e.date = 'Date is required'
     return e
@@ -52,7 +56,7 @@ export default function TransactionsPage() {
     const e = validate()
     if (Object.keys(e).length) return setErrors(e)
 
-    const rawAmount = parseFloat(form.amount)
+    const rawAmount = parseFloat(String(form.amount))
     const amount    = form.type === 'expense' ? -rawAmount : rawAmount
     const txn = { ...form, amount, id: editing?.id || uid() }
     saveTransaction(txn)
@@ -60,13 +64,13 @@ export default function TransactionsPage() {
     setModal(null)
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = (id: string) => {
     deleteTransaction(id)
     refresh()
     setDeleteConfirm(null)
   }
 
-  const f = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
+  const f = (k: keyof TransactionForm, v: unknown) => setForm(prev => ({ ...prev, [k]: v }))
 
   return (
     <div className="fade-in" data-testid="transactions-page">

@@ -60,7 +60,7 @@ export default function Sidebar() {
   )
 }
 
-function ChartIcon({ className }) {
+function ChartIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
       <rect x="3" y="10" width="3" height="7" rx="1"/>
@@ -70,7 +70,7 @@ function ChartIcon({ className }) {
   )
 }
 
-function ListIcon({ className }) {
+function ListIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M3 5h14M3 10h14M3 15h8" strokeLinecap="round"/>
@@ -78,7 +78,7 @@ function ListIcon({ className }) {
   )
 }
 
-function BudgetIcon({ className }) {
+function BudgetIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
       <circle cx="10" cy="10" r="7"/>

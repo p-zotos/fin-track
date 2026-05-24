@@ -4,8 +4,8 @@ import { getTransactions, getMonthlyStats, getBudgetSpending, getAccountBalance,
 import { CATEGORIES } from '../data/seed.js'
 import { format } from 'date-fns'
 
-const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
-const cat = (id) => CATEGORIES.find(c => c.id === id)
+const fmt = (n: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+const cat = (id: string) => CATEGORIES.find(c => c.id === id)
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
@@ -108,11 +108,11 @@ export default function DashboardPage() {
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData} barGap={4}>
               <XAxis dataKey="month" tick={{ fill: '#9896a4', fontSize: 12 }} axisLine={false} tickLine={false}/>
-              <YAxis tick={{ fill: '#9896a4', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `$${v/1000}k`}/>
+              <YAxis tick={{ fill: '#9896a4', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v as number)/1000}k`}/>
               <Tooltip
                 contentStyle={{ background: '#1e1e24', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }}
                 labelStyle={{ color: '#f0efe8' }}
-                formatter={(v, n) => [fmt(v), n === 'income' ? 'Income' : 'Expenses']}
+                formatter={(v) => [fmt(v as number), typeof v === 'number' ? 'Income' : 'Expenses']}
               />
               <Bar dataKey="income"   fill="#69db7c" radius={[4,4,0,0]}/>
               <Bar dataKey="expenses" fill="#ff6b6b" radius={[4,4,0,0]}/>

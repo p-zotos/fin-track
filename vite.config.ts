@@ -6,6 +6,6 @@ export default defineConfig({
   base: '/fin-track/',
   build: {
     outDir: 'dist',
-    sourcemap: true
-  }
+    sourcemap: true,
+  },
 })

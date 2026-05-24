@@ -2,49 +2,53 @@ import { useState } from 'react'
 import { getBudgetSpending, saveBudget, deleteBudget, getFlags } from '../data/store.js'
 import { CATEGORIES } from '../data/seed.js'
 
-const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
-const uid = () => 'bud-' + Date.now()
-const cat = (id) => CATEGORIES.find(c => c.id === id)
+const fmt = (n: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+const uid = (): string => 'bud-' + Date.now()
+const cat = (id: string) => CATEGORIES.find(c => c.id === id)
 
-const EMPTY = { name: '', categoryId: 'cat-2', limit: '', period: 'monthly' }
+type BudgetForm = { name: string; categoryId: string; limit: string | number; period: string }
+type BudgetErrors = { name?: string; limit?: string }
+type BudgetModalMode = 'add' | 'edit' | null
+
+const EMPTY: BudgetForm = { name: '', categoryId: 'cat-2', limit: '', period: 'monthly' }
 
 export default function BudgetsPage() {
   const flags   = getFlags()
   const [budgets, setBudgets] = useState(() => getBudgetSpending(2024, 12))
-  const [modal,   setModal]   = useState(null)
-  const [editing, setEditing] = useState(null)
-  const [form,    setForm]    = useState(EMPTY)
-  const [errors,  setErrors]  = useState({})
-  const [deleteCf,setDeleteCf]= useState(null)
+  const [modal,   setModal]   = useState<BudgetModalMode>(null)
+  const [editing, setEditing] = useState<ReturnType<typeof getBudgetSpending>[number] | null>(null)
+  const [form,    setForm]    = useState<BudgetForm>(EMPTY)
+  const [errors,  setErrors]  = useState<BudgetErrors>({})
+  const [deleteCf,setDeleteCf]= useState<string | null>(null)
 
   const refresh = () => setBudgets(getBudgetSpending(2024, 12))
-  const f = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
+  const f = (k: keyof BudgetForm, v: unknown) => setForm(prev => ({ ...prev, [k]: v }))
 
   const openAdd = () => { setForm(EMPTY); setErrors({}); setEditing(null); setModal('add') }
-  const openEdit = (b) => {
+  const openEdit = (b: ReturnType<typeof getBudgetSpending>[number]) => {
     setForm({ name: b.name, categoryId: b.categoryId, limit: b.limit, period: b.period })
     setErrors({}); setEditing(b); setModal('edit')
   }
 
-  const validate = () => {
-    const e = {}
+  const validate = (): BudgetErrors => {
+    const e: BudgetErrors = {}
     if (!form.name.trim()) e.name = 'Name is required'
-    if (!form.limit || isNaN(parseFloat(form.limit)) || parseFloat(form.limit) <= 0) e.limit = 'Enter a valid limit'
+    if (!form.limit || isNaN(parseFloat(String(form.limit))) || parseFloat(String(form.limit)) <= 0) e.limit = 'Enter a valid limit'
     return e
   }
 
   const handleSave = () => {
     const e = validate()
     if (Object.keys(e).length) return setErrors(e)
-    saveBudget({ ...form, limit: parseFloat(form.limit), id: editing?.id || uid() })
+    saveBudget({ ...form, limit: parseFloat(String(form.limit)), id: editing?.id || uid() })
     refresh(); setModal(null)
   }
 
-  const handleDelete = (id) => { deleteBudget(id); refresh(); setDeleteCf(null) }
+  const handleDelete = (id: string) => { deleteBudget(id); refresh(); setDeleteCf(null) }
 
   const overBudget = budgets.filter(b => b.percent > 100)
 
-  const barColor = (pct) => {
+  const barColor = (pct: number): string => {
     if (pct >= 100) return 'var(--red)'
     if (pct >= 80)  return 'var(--amber)'
     return 'var(--green)'

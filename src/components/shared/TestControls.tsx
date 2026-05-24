@@ -3,15 +3,15 @@ import { getFlags, setFlag, resetToSeedData } from '../../data/store.js'
 
 export default function TestControls() {
   const [open, setOpen]   = useState(false)
-  const [flags, setFlags] = useState(getFlags())
+  const [flags, setFlags] = useState<Record<string, boolean>>(getFlags())
   const [reset, setReset] = useState(false)
 
   useEffect(() => { setFlags(getFlags()) }, [open])
 
-  const toggleFlag = (key) => {
+  const toggleFlag = (key: string) => {
     const next = !flags[key]
     setFlag(key, next)
-    setFlags(f => ({ ...f, [key]: next }))
+    setFlags((f: Record<string, boolean>) => ({ ...f, [key]: next }))
     window.dispatchEvent(new Event('fintrack:flags-changed'))
   }
 
