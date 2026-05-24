@@ -1,2 +1,6 @@
 node_modules/
 dist/
+allure-results/
+playwright-report/
+test-results/
+tests/.auth/user.json
