@@ -1,53 +1,21 @@
-export interface Credentials {
-  email: string
-  password: string
-}
+/** Saved session for the logged-in demo user, written once by auth.setup.ts. */
+export const AUTH_FILE = 'tests/.auth/user.json'
 
-export interface TransactionData {
-  description: string
-  amount: string
-  type: 'income' | 'expense'
-  note?: string
-}
+/** The app is served under a sub-path (GitHub Pages). */
+export const APP_BASE_PATH = '/fin-track/'
 
-export interface BudgetData {
-  name: string
-  limit: string
-  categoryId?: string
-  period?: 'monthly' | 'weekly' | 'yearly'
-}
-
-export const DEMO_CREDENTIALS: Credentials = {
-  email:    'alex@fintrack.demo',
-  password: 'demo1234',
-}
-
-export const WRONG_CREDENTIALS: Credentials = {
-  email:    'wrong@example.com',
-  password: 'wrongpass',
-}
-
-export const ROUTES = {
-  login:        '/login',
-  dashboard:    '/dashboard',
-  transactions: '/transactions',
-  budgets:      '/budgets',
+/** localStorage keys the app persists its state under (mirrors src/data/store.ts). */
+export const STORAGE_KEYS = {
+  transactions: 'fintrack_transactions',
+  budgets:      'fintrack_budgets',
+  auth:         'fintrack_auth',
+  flags:        'fintrack_flags',
 } as const
 
-export const TEST_TRANSACTION: TransactionData = {
-  description: 'QA Test Transaction',
-  amount:      '42.50',
-  type:        'expense',
-  note:        'Created by automated test',
-}
+export type AppRoute = 'login' | 'dashboard' | 'transactions' | 'budgets'
 
-export const TEST_BUDGET: BudgetData = {
-  name:  'QA Test Budget',
-  limit: '250',
-}
-
-/** Seed transaction IDs we can rely on always being present after a reset */
-export const SEED_TXN_IDS = {
-  first:  'txn-001',
-  income: 'txn-002',
-} as const
+/**
+ * Exact URL matcher for an app route, including the base path.
+ * A loose `/\/transactions/` would also match `localhost:5173/transactions` (a 404 outside the base path).
+ */
+export const appUrl = (route: AppRoute): RegExp => new RegExp(`${APP_BASE_PATH}${route}/?$`)

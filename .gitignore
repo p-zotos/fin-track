@@ -1,6 +1,12 @@
 node_modules/
 dist/
-allure-results/
+
+# Playwright
 playwright-report/
 test-results/
+blob-report/
 tests/.auth/user.json
+
+# Allure
+allure-results/
+allure-report/

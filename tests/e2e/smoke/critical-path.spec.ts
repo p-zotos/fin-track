@@ -1,92 +1,75 @@
-import { test, expect } from '../../fixtures/pages.fixture.js'
-import { DEMO_CREDENTIALS, WRONG_CREDENTIALS } from '../../utils/constants.js'
+import { test, expect } from '../../fixtures/index.js'
+import { STAT_CARDS } from '../../pages/DashboardPage.js'
+import { DEMO_CREDENTIALS, SEED } from '../../data/test-data.js'
+import { appUrl } from '../../utils/constants.js'
 
 /**
- * SMOKE SUITE
- * Critical happy-path tests across all pages.
- * Runs on every push / PR — must complete in under 2 minutes.
- * @tags: @smoke
+ * SMOKE — the critical user journeys, one test each.
+ * Broad and shallow: if any of these fail, the build is not worth testing further.
  */
 
-test.describe('Authentication @smoke', () => {
-  // This forces these 4 tests to start with a completely empty, unauthenticated browser cache
-  test.use({ storageState: { cookies: [], origins: [] } })
-  test('redirects unauthenticated user to login', async ({ page }) => {
-    await page.goto('dashboard/')
-    await expect(page).toHaveURL(/\/login/)
-  })
+test.describe('Critical paths', { tag: '@smoke' }, () => {
+  test.describe('logged out', () => {
+    test.use({ appState: { authenticated: false } })
 
-  test('logs in with valid credentials and lands on dashboard', async ({ loginPage }) => {
-    await loginPage.goto()
-    await loginPage.login(DEMO_CREDENTIALS.email, DEMO_CREDENTIALS.password)
-    await loginPage.assertRedirectedToDashboard()
-  })
-
-  test('shows error on invalid credentials', async ({ loginPage }) => {
-    await loginPage.goto()
-    await loginPage.login(WRONG_CREDENTIALS.email, WRONG_CREDENTIALS.password)
-    await loginPage.assertError('Invalid email or password')
-  })
-})
-
-test.describe('Dashboard @smoke', () => {
-  test.beforeEach(async ({ dashboardPage }) => {
-    await dashboardPage.goto()
-  })
-
-  test('renders all four stat cards', async ({ dashboardPage }) => {
-    await dashboardPage.assertAllStatCardsVisible()
-  })
-
-  test('renders both charts', async ({ dashboardPage }) => {
-    await dashboardPage.assertChartsVisible()
-  })
-
-  test('renders recent transactions table with data', async ({ dashboardPage }) => {
-    await dashboardPage.assertRecentTransactionsVisible()
-  })
-
-  test('sidebar navigation links are present', async ({ dashboardPage }) => {
-    await expect(dashboardPage.sidebar).toBeVisible()
-    await expect(dashboardPage.navDashboard).toBeVisible()
-    await expect(dashboardPage.navTransactions).toBeVisible()
-    await expect(dashboardPage.navBudgets).toBeVisible()
-  })
-})
-
-test.describe('Transactions @smoke', () => {
-  test.beforeEach(async ({ transactionsPage }) => {
-    await transactionsPage.goto()
-  })
-
-  test('renders the transactions list', async ({ transactionsPage }) => {
-    const count = await transactionsPage.getResultsCount()
-    expect(count).toBeGreaterThan(0)
-  })
-
-  test('can add a new transaction', async ({ transactionsPage }) => {
-    const before = await transactionsPage.getResultsCount()
-    await transactionsPage.addTransaction({
-      description: 'Smoke Test Transaction',
-      amount: '10',
-      type: 'expense',
+    test('visitor is redirected from a protected page to login', async ({ page, loginPage }) => {
+      await page.goto('dashboard')
+      await expect(page).toHaveURL(appUrl('login'))
+      await loginPage.expectLoaded()
     })
-    const after = await transactionsPage.getResultsCount()
-    expect(after).toBe(before + 1)
-  })
-})
 
-test.describe('Budgets @smoke', () => {
-  test.beforeEach(async ({ budgetsPage }) => {
+    test('user can log in and lands on the dashboard', async ({ loginPage, dashboardPage }) => {
+      await loginPage.goto()
+      await loginPage.login(DEMO_CREDENTIALS)
+      await expect(loginPage.page).toHaveURL(appUrl('dashboard'))
+      await dashboardPage.expectLoaded()
+    })
+
+    test('invalid credentials are rejected', async ({ loginPage }) => {
+      await loginPage.goto()
+      await loginPage.login({ email: 'wrong@example.com', password: 'wrongpass' })
+      await loginPage.expectError('Invalid email or password')
+      await expect(loginPage.page).toHaveURL(appUrl('login'))
+    })
+  })
+
+  test('dashboard shows stats, charts and recent activity', async ({ dashboardPage }) => {
+    await dashboardPage.goto()
+    for (const card of STAT_CARDS) await expect(dashboardPage.stat(card)).toBeVisible()
+    await expect(dashboardPage.chartIncomeExpenses).toBeVisible()
+    await expect(dashboardPage.chartSpendingBreakdown).toBeVisible()
+    await expect(dashboardPage.recentRows.first()).toBeVisible()
+  })
+
+  test('user can move between all sections from the sidebar', async ({ dashboardPage, transactionsPage, budgetsPage }) => {
+    await dashboardPage.goto()
+    await dashboardPage.sidebar.navigateTo('transactions')
+    await transactionsPage.expectLoaded()
+    await dashboardPage.sidebar.navigateTo('budgets')
+    await budgetsPage.expectLoaded()
+    await dashboardPage.sidebar.navigateTo('dashboard')
+    await dashboardPage.expectLoaded()
+  })
+
+  test('user can add a transaction', async ({ transactionsPage }) => {
+    await transactionsPage.goto()
+    await transactionsPage.expectResultsCount(SEED.transactions)
+    await transactionsPage.addTransaction({ description: 'Smoke test coffee', amount: 4.5, type: 'expense' })
+    await transactionsPage.expectResultsCount(SEED.transactions + 1)
+    await expect(transactionsPage.rowByDescription('Smoke test coffee')).toBeVisible()
+  })
+
+  test('user can add a budget', async ({ budgetsPage }) => {
     await budgetsPage.goto()
+    await expect(budgetsPage.cards).toHaveCount(SEED.budgets)
+    await budgetsPage.addBudget({ name: 'Smoke test budget', limit: 100 })
+    await expect(budgetsPage.cards).toHaveCount(SEED.budgets + 1)
+    await expect(budgetsPage.cardByName('Smoke test budget')).toBeVisible()
   })
 
-  test('renders the budgets list with data', async ({ budgetsPage }) => {
-    await expect(budgetsPage.budgetList).toBeVisible()
-  })
-
-  test('can add a new budget', async ({ budgetsPage }) => {
-    await budgetsPage.addBudget({ name: 'Smoke Test Budget', limit: '100' })
-    await expect(budgetsPage.page.getByText('Smoke Test Budget')).toBeVisible()
+  test('user can log out', async ({ dashboardPage, loginPage }) => {
+    await dashboardPage.goto()
+    await dashboardPage.sidebar.logout()
+    await loginPage.expectLoaded()
   })
 })

@@ -8,10 +8,17 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "playwright test",
+    "test:chromium": "playwright test --project=chromium",
     "test:smoke": "playwright test --grep @smoke",
     "test:regression": "playwright test --grep @regression",
     "test:a11y": "playwright test --grep @a11y",
-    "test:report": "playwright show-report"
+    "test:known-bugs": "playwright test --grep @known-bug",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "report:allure": "allure generate allure-results --clean --open",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run lint"
   },
   "dependencies": {
     "date-fns": "^3.6.0",
@@ -24,11 +31,15 @@
     "@axe-core/playwright": "^4.10.0",
     "@playwright/test": "^1.47.2",
     "@types/node": "^25.9.1",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.3.1",
+    "allure": "^3.22.1",
     "allure-playwright": "^3.0.3",
+    "eslint": "^10.14.0",
+    "eslint-plugin-playwright": "^2.12.2",
     "typescript": "^6.0.2",
+    "typescript-eslint": "^8.72.1",
     "vite": "^5.4.8"
   }
 }

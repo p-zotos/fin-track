@@ -1,165 +1,98 @@
 import { type Page, type Locator, expect } from '@playwright/test'
+import { AppShellPage } from './AppShellPage.js'
+import { TransactionModal, type TransactionFormData } from './components/TransactionModal.js'
+import { ConfirmDialog } from './components/ConfirmDialog.js'
+import { categoryId } from '../data/test-data.js'
 
-export interface TransactionFormData {
-  description?: string
-  amount?:      string | number
-  type?:        'income' | 'expense'
-  date?:        string
-  note?:        string
-}
-
-type ValidationField = 'description' | 'amount' | 'date'
-
-export class TransactionsPage {
-  readonly page: Page
-
-  // Page root & filters
-  readonly root:           Locator
+export class TransactionsPage extends AppShellPage {
   readonly searchInput:    Locator
   readonly filterCategory: Locator
   readonly filterType:     Locator
   readonly addButton:      Locator
   readonly resultsCount:   Locator
+  readonly rows:           Locator
   readonly emptyState:     Locator
-
-  // Add/Edit modal
-  readonly modal:             Locator
-  readonly modalDescription:  Locator
-  readonly modalAmount:       Locator
-  readonly modalType:         Locator
-  readonly modalDate:         Locator
-  readonly modalCategory:     Locator
-  readonly modalNote:         Locator
-  readonly modalSaveButton:   Locator
-  readonly modalCancelButton: Locator
-  readonly modalCloseButton:  Locator
-
-  // Validation errors
-  readonly errorDescription: Locator
-  readonly errorAmount:      Locator
-  readonly errorDate:        Locator
-
-  // Delete confirm modal
-  readonly deleteModal:         Locator
-  readonly deleteConfirmButton: Locator
-  readonly deleteCancelButton:  Locator
+  readonly modal:          TransactionModal
+  readonly deleteDialog:   ConfirmDialog
 
   constructor(page: Page) {
-    this.page = page
-
-    this.root           = page.getByTestId('transactions-page')
+    super(page, 'transactions', 'transactions-page')
     this.searchInput    = page.getByTestId('search-input')
     this.filterCategory = page.getByTestId('filter-category')
     this.filterType     = page.getByTestId('filter-type')
     this.addButton      = page.getByTestId('btn-add-transaction')
     this.resultsCount   = page.getByTestId('results-count')
+    this.rows           = this.root.locator('tbody tr')
     this.emptyState     = page.getByTestId('empty-state')
-
-    this.modal             = page.getByTestId('transaction-modal')
-    this.modalDescription  = page.getByTestId('modal-input-description')
-    this.modalAmount       = page.getByTestId('modal-input-amount')
-    this.modalType         = page.getByTestId('modal-select-type')
-    this.modalDate         = page.getByTestId('modal-input-date')
-    this.modalCategory     = page.getByTestId('modal-select-category')
-    this.modalNote         = page.getByTestId('modal-input-note')
-    this.modalSaveButton   = page.getByTestId('btn-save-transaction')
-    this.modalCancelButton = page.getByTestId('btn-cancel-modal')
-    this.modalCloseButton  = page.getByTestId('btn-close-modal')
-
-    this.errorDescription = page.getByTestId('error-description')
-    this.errorAmount      = page.getByTestId('error-amount')
-    this.errorDate        = page.getByTestId('error-date')
-
-    this.deleteModal         = page.getByTestId('delete-confirm-modal')
-    this.deleteConfirmButton = page.getByTestId('btn-confirm-delete')
-    this.deleteCancelButton  = page.getByTestId('btn-cancel-delete')
+    this.modal          = new TransactionModal(page)
+    this.deleteDialog   = new ConfirmDialog(page, 'delete-confirm-modal')
   }
 
-  async goto(): Promise<void> {
-    await this.page.goto('transactions/')
-    await expect(this.root).toBeVisible()
+  row(txnId: string): Locator {
+    return this.page.getByTestId(`txn-row-${txnId}`)
+  }
+
+  rowByDescription(description: string): Locator {
+    return this.rows.filter({ hasText: description })
+  }
+
+  /** Amount cell of a row, e.g. "−$2,200.00". */
+  rowAmount(row: Locator): Locator {
+    return row.locator('.amount')
+  }
+
+  rowDate(row: Locator): Locator {
+    return row.locator('td').first()
   }
 
   async search(text: string): Promise<void> {
     await this.searchInput.fill(text)
-    await this.page.waitForTimeout(200)
   }
 
-  async filterByCategory(categoryName: string): Promise<void> {
-    await this.filterCategory.selectOption({ label: categoryName })
+  async filterByCategory(name: string): Promise<void> {
+    // Options read e.g. "🍔 Food", so select by value rather than by visible label.
+    await this.filterCategory.selectOption(categoryId(name))
   }
 
   async filterByType(type: 'income' | 'expense'): Promise<void> {
     await this.filterType.selectOption(type)
   }
 
-  async clearFilters(): Promise<void> {
-    await this.searchInput.clear()
-    await this.filterCategory.selectOption('')
-    await this.filterType.selectOption('')
-  }
-
   async openAddModal(): Promise<void> {
     await this.addButton.click()
-    await expect(this.modal).toBeVisible()
-  }
-
-  async fillTransactionForm(data: TransactionFormData): Promise<void> {
-    const { description, amount, type, date, note } = data
-    if (description !== undefined) await this.modalDescription.fill(description)
-    if (amount      !== undefined) await this.modalAmount.fill(String(amount))
-    if (type        !== undefined) await this.modalType.selectOption(type)
-    if (date        !== undefined) await this.modalDate.fill(date)
-    if (note        !== undefined) await this.modalNote.fill(note)
-  }
-
-  async saveTransaction(): Promise<void> {
-    await this.modalSaveButton.click()
+    await expect(this.modal.root).toBeVisible()
   }
 
   async addTransaction(data: TransactionFormData): Promise<void> {
     await this.openAddModal()
-    await this.fillTransactionForm(data)
-    await this.saveTransaction()
-    await expect(this.modal).not.toBeVisible()
+    await this.modal.fill(data)
+    await this.modal.save()
+    await this.modal.expectClosed()
   }
 
-  async editTransaction(txnId: string): Promise<void> {
+  async openEdit(txnId: string): Promise<void> {
     await this.page.getByTestId(`btn-edit-${txnId}`).click()
-    await expect(this.modal).toBeVisible()
+    await expect(this.modal.root).toBeVisible()
+  }
+
+  async requestDelete(txnId: string): Promise<void> {
+    await this.page.getByTestId(`btn-delete-${txnId}`).click()
+    await expect(this.deleteDialog.root).toBeVisible()
   }
 
   async deleteTransaction(txnId: string): Promise<void> {
-    await this.page.getByTestId(`btn-delete-${txnId}`).click()
-    await expect(this.deleteModal).toBeVisible()
-    await this.deleteConfirmButton.click()
-    await expect(this.deleteModal).not.toBeVisible()
+    await this.requestDelete(txnId)
+    await this.deleteDialog.confirm()
   }
 
+  /** Reads the current count once — for before/after comparisons. Prefer expectResultsCount for assertions. */
   async getResultsCount(): Promise<number> {
-    const text = await this.resultsCount.textContent() ?? ''
-    const match = text.match(/^(\d+)/)
-    return match ? parseInt(match[1], 10) : 0
+    const text = await this.resultsCount.innerText()
+    return Number.parseInt(text, 10)
   }
 
-  async assertTransactionVisible(txnId: string): Promise<void> {
-    await expect(this.page.getByTestId(`txn-row-${txnId}`)).toBeVisible()
-  }
-
-  async assertTransactionNotVisible(txnId: string): Promise<void> {
-    await expect(this.page.getByTestId(`txn-row-${txnId}`)).not.toBeVisible()
-  }
-
-  async assertEmptyState(): Promise<void> {
-    await expect(this.emptyState).toBeVisible()
-  }
-
-  async assertValidationError(field: ValidationField): Promise<void> {
-    const errors: Record<ValidationField, Locator> = {
-      description: this.errorDescription,
-      amount:      this.errorAmount,
-      date:        this.errorDate,
-    }
-    await expect(errors[field]).toBeVisible()
+  /** Web-first: retries until the "N transactions …" text shows the expected number. */
+  async expectResultsCount(count: number): Promise<void> {
+    await expect(this.resultsCount).toHaveText(new RegExp(`^${count} transactions? `))
   }
 }
